@@ -4,6 +4,9 @@ import { useState, useRef } from 'react';
 import {allPossibleMoves, isPossibleMove, isLegal, isInCheck, isMate, tn} from './helper';
 import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 
+
+var moves = [];
+
 export default function ChessBoard() {
 
   const window_width = Dimensions.get('window').width;
@@ -28,7 +31,7 @@ export default function ChessBoard() {
 // move-> (from, to, incheck, mate, captured, promoted)
  
 
-  var moves = [];
+ 
   const pieces = [];
   const renderBoard = ()=>{
     map.map((row, i) =>
@@ -53,6 +56,10 @@ const [turn, setTurn] = useState('w');
 const [lastTouch,setLastTouch] = useState(null);
 const [hint, setHint] = useState([]);
 const [activePiece, setActivePiece] = useState({piece:null, row:null, col:null});
+const [mate, setMate] = useState({side:'', isMate:false});
+
+const castleInfo ={canWhiteCastle_short:true, canWhiteCastle_long:true, canBlackCastle_long:true, canBlackCastle_long:true, hasWkMoved:false, hasBkMoved:false, whiteRookKmoved:false, whiteRookQmoved:false, blackRookKmoved:false, blackRookQmoved:false}
+
 
 
 const handleTouch = (e)=>{
@@ -98,12 +105,12 @@ else{
 //  console.log({activePiece,lastTouch, row, col, map});
 console.log('touched-3 :', row, col, activePiece)
   let lastmove = JSON.parse(JSON.stringify(lastMove));
-  console.log(isPossibleMove(activePiece.piece,activePiece.row,activePiece.col,tn(row,col),map,lastmove));
-  console.log(isLegal(activePiece.piece,activePiece.row, activePiece.col,tn(row,col),map,lastMove));
+  //console.log(isPossibleMove(activePiece.piece,activePiece.row,activePiece.col,tn(row,col),map,lastmove));
+  //console.log(isLegal(activePiece.piece,activePiece.row, activePiece.col,tn(row,col),map,lastMove, moves));
   // check if the move is possible and Legal, if so make the move
- if(isPossibleMove(activePiece.piece,activePiece.row,activePiece.col,tn(row,col),map, lastmove) && isLegal(activePiece.piece,activePiece.row, activePiece.col,tn(row,col),map,lastmove)){
+ if(isPossibleMove(activePiece.piece,activePiece.row,activePiece.col,tn(row,col),map, lastmove) && isLegal(activePiece.piece,activePiece.row, activePiece.col,tn(row,col),map,lastmove, moves)){
   console.log('touched-4 :', row, col)
-   var updatedMap = map.map(row => row.slice());
+  var updatedMap = map.map(row => row.slice());
   updatedMap[lastTouch[0]-1][lastTouch[1]-1] = "";
   updatedMap[row-1][col-1] = activePiece.piece;
 
@@ -114,21 +121,41 @@ console.log('touched-3 :', row, col, activePiece)
     enpasant=true;
   }
 
+  //check for castling
+  if(activePiece.piece[1]==='k' && Math.abs(lastTouch[1]-col)>1){
+    if(col===3){
+      updatedMap[row-1][0] = "";
+      updatedMap[row-1][3] = activePiece.piece[0]+'r';
+    }
+    else{
+      updatedMap[row-1][7] = "";
+      updatedMap[row-1][5] = activePiece.piece[0]+'r';
+    }
+  }
 
 
   //console.log(updatedMap);
   
  
   setMap(updatedMap)
-  console.log("IsMate: ", isMate('w', map, lastmove));
+  //console.log("IsMate: ", isMate('w', map, lastmove));
   console.log('turn :', turn);
   console.log(activePiece.row, activePiece.col,"   ", row, col)
   const captured = enpasant ? true : (map[row-1][col-1]!="" ? true: false);
-  setLastMove({piece:activePiece.piece,from:[activePiece.row,activePiece.col],to:[row,col],incheck:false,mate:isMate(turn==='w'? 'b':'w', map, lastmove), captured: captured, promoted:false})
+  setLastMove({piece:activePiece.piece,from:[activePiece.row,activePiece.col],to:[row,col],incheck:false,mate:'', captured: captured, promoted:false})
+  //update moves array with the latest move
+  moves.push(JSON.parse(JSON.stringify(lastMove)));
+  //update castleInfo
+
+ // console.log("moves--", moves.length, " ", moves);
+ // console.log("------------------");
   setLastTouch(null)
   setActivePiece({piece:null, row:null, col:null})
   setHint(null)
   setTurn(turn==='w'? 'b' : 'w')
+  if(isInCheck(turn,map,lastMove) && isMate(turn,map,lastMove)){
+    setMate({side:turn, isMate:true});
+  }
   console.log('turn changed :', turn);
 
  }

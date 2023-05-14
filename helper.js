@@ -5,8 +5,8 @@ var en={color:null, pos:null};
 //console.log(lastMove);
 if(lastMove.piece != null){
     lastMoveColor = lastMove.piece[0];
-    if(lastMove.piece[1] === 'p' && Math.abs(lastMove.from[1]-lastMove.to[1])===1) {
-        en={color: lastMoveColor, pos:tn(lastMove.from[0], lastMove.to[1])};
+    if(lastMove.piece[1] === 'p' && Math.abs(lastMove.from[0]-lastMove.to[0])>1) {
+        en={color: lastMoveColor, pos:tn(lastMove.to[0], lastMove.to[1])};
     }
         
 }
@@ -113,8 +113,7 @@ switch(piece){
         if(col-1>=1 && map[row][col-2][0]=='b') ps.push(tn(row+1,col-1));
         if(col+1<=8 && map[row][col][0]=='b') ps.push(tn(row+1,col+1));
         if(en.color==='b'){
-            if(tn(row+1,col-1)===en.pos && map[row+2][col-2]==='') ps.push(tn(row+1,col-1));
-            if(tn(row+1,col+1)===en.pos && map[row+2][col]==='') ps.push(tn(row+1,col+1));
+            if(Math.floor(en.pos/10)=== row && Math.abs(en.pos%10-col)===1) ps.push(tn(row+1,en.pos%10))
         }
     }
 
@@ -129,8 +128,7 @@ switch(piece){
             if(col-1 >= 1 && map[row-2][col-2][0]=='w') ps.push(tn(row-1,col-1));
             if(col+1 <= 8 && map[row-2][col][0]=='w') ps.push(tn(row-1,col+1));
             if(en.color==='w'){
-                if(tn(row-1,col-1)===en.pos && map[row-2][col-2]==='') ps.push(tn(row-1,col-1));
-                if(tn(row-1,col+1)===en.pos && map[row-2][col]==='') ps.push(tn(row-1,col+1));
+                if(Math.floor(en.pos/10)=== row && Math.abs(en.pos%10-col)===1) ps.push(tn(row-1,en.pos%10))
             }
         }
         break;
@@ -528,7 +526,7 @@ function isPossibleMove(piece,row,col,to_position,map, lastMove){
     return false;
     }
 
-function isLegal(piece,from_row,from_col,to_position, map, lastMove){
+function isLegal(piece,from_row,from_col,to_position, map, lastMove, moves){
     // make the move on updatedMap assuming the move is leagal
     var updatedMap = map.map(row => row.slice());
     updatedMap[from_row-1][from_col-1] = "";
@@ -536,7 +534,51 @@ function isLegal(piece,from_row,from_col,to_position, map, lastMove){
 
     //will the players king be in check if this move is made. return false if so
     if(isInCheck(piece[0],updatedMap, lastMove)) return false;
-//......
+
+    //castling rules
+    if(piece[1]=='k' && Math.abs(from_col-to_position%10)>1){
+        //black or white king tried to castle
+        let color = piece[0];
+        let row,col;
+        if(color==='w') row=1;
+        else row=8;
+
+        let castleType = '';
+        //find short side castle or Long side castle
+        if(to_position%10===7) castleType='short';
+        else castleType='long';
+
+        //check if king or rook ever moved
+        if(castleType==='short') col = 8;
+        else col = 1;
+
+            
+            for(let i=0; i<moves.length; i++){
+                
+                const move=moves[i];
+               // console.log(move);
+                const pos = (move.from[0]*10+move.from[1]);
+                const kingPos = row*10+5;
+                const rookPos = row*10+col;
+                if(pos === kingPos || pos === rookPos){console.log("king move"); return false;}
+            }
+
+        // lastly check if the oposite player eying the king or any square in between king and Rook
+        
+        var list=[];
+        if(castleType==='short')
+             list = [row*10+5,row*10+6,row*10+7];
+            
+        else list = [row*10+2,row*10+3,row*10+4,row*10+5];
+            
+
+        console.log("list-", list);
+        for(let i=0; i<list.length; i++){
+            if(isInCheck(color,map,lastMove,list[i])) return false;
+        }
+    }
+// end of castle check
+
 ///.... provide more rules
 
     //nothing looks ilegal
@@ -544,14 +586,16 @@ function isLegal(piece,from_row,from_col,to_position, map, lastMove){
 }
 
 
-function isInCheck(color,map, lastMove){
+function isInCheck(color,map, lastMove, kingPos=""){
 
-Kposition="";
+var Kposition=kingPos;
 
-for(i=0;i<8;i++){
-    for(j=0;j<8;j++){
-        if(map[i][j] === color+'k'){
-            Kposition=(tn(i+1,j+1));
+if(Kposition===""){
+    for(i=0;i<8;i++){
+        for(j=0;j<8;j++){
+            if(map[i][j] === color+'k'){
+                Kposition=(tn(i+1,j+1));
+            }
         }
     }
 }
@@ -566,12 +610,10 @@ for(i=0; i<8; i++){
 }
 
 
-//console.log({opArmy : opArmy});
 for(j=0;j<opArmy.length;j++){
     tmp = allPossibleMoves(opArmy[j].val,Math.floor(opArmy[j].pos/10), opArmy[j].pos%10,map, lastMove);
     for(i=0;i<tmp.length;i++){
         if(tmp[i]==Kposition){  
-           // console.log('kpo: ', Kposition);
             return true;
         } 
     } 
@@ -606,7 +648,7 @@ defenseArmy.forEach(item=>{
        return updatedMap;
     }).forEach(map=>{
         if(!isInCheck(color,map,lastMove)){
-            console.log(map);
+            //console.log(map);
             ismate=false;
             return false;
         } 
@@ -624,5 +666,6 @@ else return false;
 function tn(x,y){
     return 10*x+y*1;
     }
+
 
 export {allPossibleMoves, tn, isPossibleMove,isLegal, isInCheck, isMate};
