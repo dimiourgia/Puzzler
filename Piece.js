@@ -48,6 +48,7 @@ export default function ChessBoard(props) {
 
       return(
       <Image style={{width:size, 
+        backgroundColor:props.background,
         zIndex:1,
         height:size, 
         position:'absolute', 

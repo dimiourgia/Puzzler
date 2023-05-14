@@ -2,10 +2,15 @@ import { Dimensions, StyleSheet, Text, View, Image, ImageBackground, TouchableWi
 import Piece from './Piece';
 import { useState, useRef } from 'react';
 import {allPossibleMoves, isPossibleMove, isLegal, isInCheck, isMate, tn} from './helper';
-import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
+
 
 
 var moves = [];
+const blackPromoteToMenuImageSource = [require('./assets/images/pieces/bq.png'),require('./assets/images/pieces/br.png'),require('./assets/images/pieces/bb.png'),require('./assets/images/pieces/bn.png')]
+const whitePromoteToMenuImageSource = [require('./assets/images/pieces/wn.png'),require('./assets/images/pieces/wb.png'),require('./assets/images/pieces/wr.png'),require('./assets/images/pieces/wq.png')]
+
+const blackPromotesTo = ['bn','bb','br','bq'];
+const whitePromotesTo = ['wq','wr','wb','wn'];
 
 export default function ChessBoard() {
 
@@ -57,6 +62,8 @@ const [lastTouch,setLastTouch] = useState(null);
 const [hint, setHint] = useState([]);
 const [activePiece, setActivePiece] = useState({piece:null, row:null, col:null});
 const [mate, setMate] = useState({side:'', isMate:false});
+const [promoted, setPromoted] = useState(null);
+
 
 const castleInfo ={canWhiteCastle_short:true, canWhiteCastle_long:true, canBlackCastle_long:true, canBlackCastle_long:true, hasWkMoved:false, hasBkMoved:false, whiteRookKmoved:false, whiteRookQmoved:false, blackRookKmoved:false, blackRookQmoved:false}
 
@@ -87,7 +94,7 @@ const handleTouch = (e)=>{
 
  //if(lastTouch !== null && activePiece.piece[0]!==turn) return;
 
-if(lastTouch===null){
+if(promoted===null && lastTouch===null){
   console.log('touched-1 :', row, col)
   console.log('turn :', turn);
   if(map[row-1][col-1]!=""){
@@ -108,8 +115,11 @@ console.log('touched-3 :', row, col, activePiece)
   //console.log(isPossibleMove(activePiece.piece,activePiece.row,activePiece.col,tn(row,col),map,lastmove));
   //console.log(isLegal(activePiece.piece,activePiece.row, activePiece.col,tn(row,col),map,lastMove, moves));
   // check if the move is possible and Legal, if so make the move
- if(isPossibleMove(activePiece.piece,activePiece.row,activePiece.col,tn(row,col),map, lastmove) && isLegal(activePiece.piece,activePiece.row, activePiece.col,tn(row,col),map,lastmove, moves)){
+ if(promoted!=null || (isPossibleMove(activePiece.piece,activePiece.row,activePiece.col,tn(row,col),map, lastmove) && isLegal(activePiece.piece,activePiece.row, activePiece.col,tn(row,col),map,lastmove, moves))){
   console.log('touched-4 :', row, col)
+  console.log(activePiece);
+
+  if(promoted===null){
   var updatedMap = map.map(row => row.slice());
   updatedMap[lastTouch[0]-1][lastTouch[1]-1] = "";
   updatedMap[row-1][col-1] = activePiece.piece;
@@ -132,6 +142,15 @@ console.log('touched-3 :', row, col, activePiece)
       updatedMap[row-1][5] = activePiece.piece[0]+'r';
     }
   }
+
+  //check for pawn promote
+  if(activePiece.piece[1]==='p' && (row===1 || row===8)){
+    setPromoted(tn(row,col));
+    setMap(updatedMap)
+    setHint(null);
+    return;
+  }
+
 
 
   //console.log(updatedMap);
@@ -157,13 +176,47 @@ console.log('touched-3 :', row, col, activePiece)
     setMate({side:turn, isMate:true});
   }
   console.log('turn changed :', turn);
+}
+
+else{
+  let piece="";
+  const promotedToRow = Math.floor(promoted/10);
+  const promotedToCol = promoted%10;
+  if(promotedToCol === col){
+    if(promotedToRow===8){
+      if(row === 8) piece = 'wq';
+      else if(row === 7) piece = 'wr';
+      else if(row === 6) piece = 'wb';
+      else if(row === 5) piece = 'wn';
+    }
+    else{
+      if(row === 1) piece = 'bq';
+      else if(row === 2) piece = 'br';
+      else if(row === 3) piece = 'bb';
+      else if(row === 4) piece = 'bn';
+    }
+  }
+
+  if(piece!=""){
+  var updatedMap = map.map(row=>row.slice());
+  updatedMap[promotedToRow-1][promotedToCol-1] = piece;
+  setMap(updatedMap);
+  setLastMove({piece:activePiece.piece,from:[activePiece.row,activePiece.col],to:[promotedToRow,promotedToCol],incheck:false,mate:'', captured: false, promoted:piece})
+  setActivePiece({piece:null, row:null, col:null})
+  setHint(null);
+  setLastTouch(null);
+  setPromoted(null);
+  console.log(map);
+  }
+
+}
 
  }
 
  else{
   console.log('turn :', turn);
   (map[row-1][col-1]!="" && turn===activePiece.piece[0]) ? setLastTouch([row,col]) : setLastTouch(null);
-  (map[row-1][col-1]!="" && turn===activePiece.piece[0]) ? setActivePiece({piece: map[row-1][col-1],row: row,col: col}) : setActivePiece({piece:null, row:null, col:null});
+  (map[row-1][col-1]!="" && turn===activePiece.piece[0]) ? setActivePiece({piece: map[row-1][col-1],row: row,col: col}) : setActivePiece( {piece:null, row:null, col:null});
   (map[row-1][col-1]!="" && turn===activePiece.piece[0]) ? setHint(allPossibleMoves(map[row-1][col-1],row,col,map,lastmove)) : setHint(null);
   console.log(activePiece);
 }
@@ -192,6 +245,38 @@ console.log('touched-3 :', row, col, activePiece)
         &&
        <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(lastMove.to[1]-1)*window_width/8, top:(100 + (8-lastMove.to[0])*(window_width/8))}}/>
       }
+      
+      {
+      promoted!=null && 
+       
+        ((Math.floor(promoted/10)=== 1)? blackPromotesTo.map((piece, i)=>{
+           console.log('Piece :', piece);
+           console.log("Promoted: ", promoted);
+          return(<Piece
+            key={`${i}`}
+            piece={piece}
+            size={window_width/8}
+            top={100 + (4+i)*(window_width/8)}
+            left={(promoted%10 - 1)*window_width/8}
+            background='#fff'
+           />)  
+        }) : 
+
+        whitePromotesTo.map((piece,i)=>{
+          console.log('Piece :', piece);
+          console.log("Promoted: ", promoted);
+          return(<Piece
+            key={`${i}`}
+            piece={piece}
+            size={window_width/8}
+            top={100 + (i)*(window_width/8)}
+            left={((promoted%10)-1)*window_width/8}
+            background='#fff'
+           /> )   
+        }))
+         
+      }
+
       </View>
       </TouchableWithoutFeedback>
     );
