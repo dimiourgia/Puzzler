@@ -661,6 +661,55 @@ else return false;
     
 }
 
+function makeMove(props){
+    const move = props.move;
+    const lastMove = props.lastMove;
+
+    const from_row = move.from.row;
+    const from_col = move.from.col;
+    const row = move.to.row;
+    const col = move.to.col;
+
+    var updatedMap = props.map.map(row => row.slice());
+    updatedMap[from_row-1][from_col-1] = "";
+    updatedMap[row-1][col-1] = move.piece;
+      
+        //check for enpasant movement
+        var enpasant=false;
+        if(move.piece[1]==='p' && Math.abs(move.from.col-col)===1 && map[row-1][col-1]===""){
+          updatedMap[lastMove.to[0]-1][lastMove.to[1]-1]="";
+          enpasant=true;
+        }
+      
+        //check for castling
+        if(move.piece[1]==='k' && Math.abs(from_col-col)>1){
+          if(col===3){
+            updatedMap[row-1][0] = "";
+            updatedMap[row-1][3] = move.piece[0]+'r';
+          }
+          else{
+            updatedMap[row-1][7] = "";
+            updatedMap[row-1][5] = move.piece[0]+'r';
+          }
+        }
+      
+        //check for pawn promote
+        if(activePiece.piece[1]==='p' && (row===1 || row===8)){
+            updatedMap[row-1][col-1] = move.promoted;
+          return;
+        }
+    
+
+        return({
+            map:updatedMap, 
+            move:{
+                piece:move.piece,
+                from:[from_row, from_col],
+                to:[row,col],
+                promoted:move.promoted
+             }})
+
+}
 
 
 function tn(x,y){
@@ -668,4 +717,28 @@ function tn(x,y){
     }
 
 
-export {allPossibleMoves, tn, isPossibleMove,isLegal, isInCheck, isMate};
+    function fenToMap(fen){
+        var map=[["","","","","","","",""],["","","","","","","",""],["","","","","","","",""],["","","","","","","",""],["","","","","","","",""],["","","","","","","",""],["","","","","","","",""],["","","","","","","",""]];
+        var str = fen.split(' ')[0].split('/');
+        console.log(str);
+        for(i=0;i<8;i++){
+            var tmp = str[i];
+            k=0;
+            for(z=0;z<tmp.length;z++){
+                if(!(tmp[z].toLowerCase() != tmp[z].toUpperCase())){
+                    for(j=0;j<tmp[z];j++){
+                        map[i][k]="";
+                        k++;
+                    }
+                }
+                else{
+                    if(tmp[z] === tmp[z].toUpperCase()) map[i][k]='w'+tmp[z].toLowerCase();
+                    else map[i][k] = 'b'+tmp[z].toLowerCase();
+                    k++;
+                }
+            }
+        }
+        return map;
+    }
+
+export {allPossibleMoves, tn, isPossibleMove,isLegal, isInCheck, isMate, fenToMap};

@@ -1,14 +1,24 @@
 import { Dimensions, StyleSheet, Text, View, Image, ImageBackground, TouchableWithoutFeedback, Animated } from 'react-native';
 import Piece from './Piece';
 import { useState, useRef } from 'react';
-import {allPossibleMoves, isPossibleMove, isLegal, isInCheck, isMate, tn} from './helper';
+import {allPossibleMoves, isPossibleMove, isLegal, isInCheck, isMate, tn, fenToMap} from './helper';
 
+var puzzle = {fen:'2R1K3/2Q5/8/8/8/8/pp6/1k5r', turn:'w', moves:[
+  {
+  white: {from: {row:'', col:''}, to: {row: '', col: ''}, promoted:''}, 
+  black: {from: {row:'', col:''}, to: {row: '', col: ''}, promoted:''}
+  },
+  {
+    white: {from: {row:'', col:''}, to: {row: '', col: ''}, promoted:''}, 
+    black:{from: {row:'', col:''}, to: {row: '', col: ''}, promoted:''}
+  },
+]
+}
+
+console.log(fenToMap(puzzle.fen));
 
 
 var moves = [];
-const blackPromoteToMenuImageSource = [require('./assets/images/pieces/bq.png'),require('./assets/images/pieces/br.png'),require('./assets/images/pieces/bb.png'),require('./assets/images/pieces/bn.png')]
-const whitePromoteToMenuImageSource = [require('./assets/images/pieces/wn.png'),require('./assets/images/pieces/wb.png'),require('./assets/images/pieces/wr.png'),require('./assets/images/pieces/wq.png')]
-
 const blackPromotesTo = ['bn','bb','br','bq'];
 const whitePromotesTo = ['wq','wr','wb','wn'];
 
@@ -18,7 +28,7 @@ export default function ChessBoard() {
   const window_height = Dimensions.get('window').height;
   const size=window_width;
   const board_pos = 100;
-  var flipped=false;
+  const flipped = false;
 
   const hintImageSource = require('./assets/images/others/circle.png');
 
@@ -32,14 +42,18 @@ export default function ChessBoard() {
     ["bp","bp","bp","bp","bp","bp","bp",""],
     ["br","bn","bb","bq","bk","bb","bn","br"]        
 ];
-  const [map, setMap] = useState(default_map);
+  const [map, setMap] = useState(fenToMap(puzzle.fen));
+
+ // setMap(fenToMap(puzzle.fen));
 // move-> (from, to, incheck, mate, captured, promoted)
  
 
- 
+  const map_c = map.map(row=>row.slice());
   const pieces = [];
+  const squares = [];
+
   const renderBoard = ()=>{
-    map.map((row, i) =>
+    map.map((row, i) =>{
         row.map((piece, j) =>{
           piece && pieces.push(
             
@@ -47,14 +61,42 @@ export default function ChessBoard() {
               key={`${i}-${j}`}
               piece={piece}
               size={window_width/8}
-              top={100 + (7-i)*(window_width/8)}
-              left={j*window_width/8}
+              top = {flipped ? (100 + (i)*(window_width/8)) : (100 + (7-i)*(window_width/8))}
+              left= {flipped ? (7-j)*window_width/8 : j*window_width/8}
              />         
-             )}))
+             )})});
+
+             var flag=false;
+             map_c.map((row,i)=>{
+              flag=!flag;
+              row.map((sqr,j)=>{
+                squares.push(
+                <View
+                key={`${i}-${j}`}
+                style={{
+                  width:window_width/8,
+                  height:window_width/8,
+                  top:100 + (7-i)*(window_width/8),
+                  position:'absolute',
+                  zIndex:.2,
+                  left:j*window_width/8,
+                  backgroundColor: flag ? '#30627980' : '#d1c1c180' 
+                }}
+                >
+            
+                </View>)
+                flag=!flag;
+              })
+            })
   }
 
   //render the board
+
+
+
 renderBoard();
+
+console.log(squares.length);
 
 const [lastMove, setLastMove] = useState({piece:null, from:[null, null], to:[null, null], incheck:false, mate:false, captured:false, promoted:false});
 const [turn, setTurn] = useState('w');
@@ -206,7 +248,7 @@ else{
   setHint(null);
   setLastTouch(null);
   setPromoted(null);
-  console.log(map);
+  
   }
 
 }
@@ -231,19 +273,19 @@ else{
       <View style={{width:window_width, position:'relative', height:window_height, alignContent:'center'}}>
           <ImageBackground style={{zIndex:-1, width:size, height:size, position:'absolute', top:board_pos}} source={require('./assets/images/others/board.jpg')}/>
        {pieces} 
-       {activePiece.piece && <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(activePiece.col-1)*window_width/8, top:(100 + (8-activePiece.row)*(window_width/8))}} />}
+       {activePiece.piece && <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(flipped ? ((8-activePiece.col)*window_width/8) : ((activePiece.col-1)*window_width/8)), top:(flipped? (100 + (activePiece.row-1)*(window_width/8)) : (100 + (8-activePiece.row)*(window_width/8)))}} />}
        {hint && hint.map((sqr,i)=>{
-        return (<Image key={i} source={hintImageSource} style={{width:size/8, height:size/8, zIndex:2, opacity:.4, position:'absolute', top:(100 + (8-Math.floor(sqr/10))*(window_width/8)), left:((sqr%10)-1)*size/8}} />)
+        return (<Image key={i} source={hintImageSource} style={{width:size/8, height:size/8, zIndex:2, opacity:.4, position:'absolute', top:(flipped? (100 + (Math.floor(sqr/10)-1)*(window_width/8)) : (100 + (8-Math.floor(sqr/10))*(window_width/8))), left:(flipped? ((8-(sqr%10))*size/8) : (((sqr%10)-1)*size/8))}} />)
        })}
       {
        lastMove.piece 
        && 
-       <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(lastMove.from[1]-1)*window_width/8, top:(100 + (8-lastMove.from[0])*(window_width/8))}}/> 
+       <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(flipped? ((8-lastMove.from[1])*window_width/8) : ((lastMove.from[1]-1)*window_width/8)), top:(flipped? (100 + (lastMove.from[0]-1)*(window_width/8)) : (100 + (8-lastMove.from[0])*(window_width/8)))}}/> 
       }       
       {
         lastMove.piece
         &&
-       <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(lastMove.to[1]-1)*window_width/8, top:(100 + (8-lastMove.to[0])*(window_width/8))}}/>
+       <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(flipped? ((8-lastMove.to[1])*window_width/8): ((lastMove.to[1]-1)*window_width/8)), top:(flipped? (100 + (lastMove.to[0]-1)*(window_width/8)) : (100 + (8-lastMove.to[0])*(window_width/8)))}}/>
       }
       
       {
@@ -256,8 +298,8 @@ else{
             key={`${i}`}
             piece={piece}
             size={window_width/8}
-            top={100 + (4+i)*(window_width/8)}
-            left={(promoted%10 - 1)*window_width/8}
+            top={flipped? (100 + (i)*(window_width/8)) : (100 + (4+i)*(window_width/8))}
+            left={flipped? ((8-promoted%10)*window_width/8) : (promoted%10 - 1)*window_width/8}
             background='#fff'
            />)  
         }) : 
@@ -269,15 +311,16 @@ else{
             key={`${i}`}
             piece={piece}
             size={window_width/8}
-            top={100 + (i)*(window_width/8)}
-            left={((promoted%10)-1)*window_width/8}
+            top={flipped? (100 + (4+i)*(window_width/8)) : (100 + (i)*(window_width/8))}
+            left={flipped? ((8-promoted%10)*window_width/8) : (promoted%10 - 1)*window_width/8}
             background='#fff'
            /> )   
         }))
          
       }
-
+            {squares}
       </View>
+
       </TouchableWithoutFeedback>
     );
   }
