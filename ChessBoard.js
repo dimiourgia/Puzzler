@@ -2,11 +2,12 @@ import { Dimensions, StyleSheet, Text, View, Image, ImageBackground, TouchableWi
 import Piece from './Piece';
 import { useState, useRef } from 'react';
 import {allPossibleMoves, isPossibleMove, isLegal, isInCheck, isMate, tn, fenToMap} from './helper';
+import PromotedMenu from './PromotedMenu';
 
 var puzzle = {fen:'2R1K3/2Q5/8/8/8/8/pp6/1k5r', turn:'w', moves:[
   {
-  white: {from: {row:'', col:''}, to: {row: '', col: ''}, promoted:''}, 
-  black: {from: {row:'', col:''}, to: {row: '', col: ''}, promoted:''}
+  white: {from:23, to: 73, promoted:''}, 
+  black: {from:81, to: 82, promoted:''}
   },
   {
     white: {from: {row:'', col:''}, to: {row: '', col: ''}, promoted:''}, 
@@ -19,8 +20,6 @@ console.log(fenToMap(puzzle.fen));
 
 
 var moves = [];
-const blackPromotesTo = ['bn','bb','br','bq'];
-const whitePromotesTo = ['wq','wr','wb','wn'];
 
 export default function ChessBoard() {
 
@@ -270,57 +269,18 @@ else{
 
     return (
       <TouchableWithoutFeedback onPress={(e)=>handleTouch(e)}>
-      <View style={{width:window_width, position:'relative', height:window_height, alignContent:'center'}}>
+        <View style={{width:window_width, position:'relative', height:window_height, alignContent:'center'}}>
           <ImageBackground style={{zIndex:-1, width:size, height:size, position:'absolute', top:board_pos}} source={require('./assets/images/others/board.jpg')}/>
-       {pieces} 
-       {activePiece.piece && <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(flipped ? ((8-activePiece.col)*window_width/8) : ((activePiece.col-1)*window_width/8)), top:(flipped? (100 + (activePiece.row-1)*(window_width/8)) : (100 + (8-activePiece.row)*(window_width/8)))}} />}
-       {hint && hint.map((sqr,i)=>{
-        return (<Image key={i} source={hintImageSource} style={{width:size/8, height:size/8, zIndex:2, opacity:.4, position:'absolute', top:(flipped? (100 + (Math.floor(sqr/10)-1)*(window_width/8)) : (100 + (8-Math.floor(sqr/10))*(window_width/8))), left:(flipped? ((8-(sqr%10))*size/8) : (((sqr%10)-1)*size/8))}} />)
-       })}
-      {
-       lastMove.piece 
-       && 
-       <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(flipped? ((8-lastMove.from[1])*window_width/8) : ((lastMove.from[1]-1)*window_width/8)), top:(flipped? (100 + (lastMove.from[0]-1)*(window_width/8)) : (100 + (8-lastMove.from[0])*(window_width/8)))}}/> 
-      }       
-      {
-        lastMove.piece
-        &&
-       <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(flipped? ((8-lastMove.to[1])*window_width/8): ((lastMove.to[1]-1)*window_width/8)), top:(flipped? (100 + (lastMove.to[0]-1)*(window_width/8)) : (100 + (8-lastMove.to[0])*(window_width/8)))}}/>
-      }
-      
-      {
-      promoted!=null && 
-       
-        ((Math.floor(promoted/10)=== 1)? blackPromotesTo.map((piece, i)=>{
-           console.log('Piece :', piece);
-           console.log("Promoted: ", promoted);
-          return(<Piece
-            key={`${i}`}
-            piece={piece}
-            size={window_width/8}
-            top={flipped? (100 + (i)*(window_width/8)) : (100 + (4+i)*(window_width/8))}
-            left={flipped? ((8-promoted%10)*window_width/8) : (promoted%10 - 1)*window_width/8}
-            background='#fff'
-           />)  
-        }) : 
-
-        whitePromotesTo.map((piece,i)=>{
-          console.log('Piece :', piece);
-          console.log("Promoted: ", promoted);
-          return(<Piece
-            key={`${i}`}
-            piece={piece}
-            size={window_width/8}
-            top={flipped? (100 + (4+i)*(window_width/8)) : (100 + (i)*(window_width/8))}
-            left={flipped? ((8-promoted%10)*window_width/8) : (promoted%10 - 1)*window_width/8}
-            background='#fff'
-           /> )   
-        }))
-         
-      }
-            {squares}
+          {pieces} 
+          {squares}
+          {activePiece.piece && <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(flipped ? ((8-activePiece.col)*window_width/8) : ((activePiece.col-1)*window_width/8)), top:(flipped? (100 + (activePiece.row-1)*(window_width/8)) : (100 + (8-activePiece.row)*(window_width/8)))}} />}
+          {hint && hint.map((sqr,i)=>{
+              return (<Image key={i} source={hintImageSource} style={{width:size/8, height:size/8, zIndex:2, opacity:.4, position:'absolute', top:(flipped? (100 + (Math.floor(sqr/10)-1)*(window_width/8)) : (100 + (8-Math.floor(sqr/10))*(window_width/8))), left:(flipped? ((8-(sqr%10))*size/8) : (((sqr%10)-1)*size/8))}} />)})
+          }
+          {lastMove.piece && <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(flipped? ((8-lastMove.from[1])*window_width/8) : ((lastMove.from[1]-1)*window_width/8)), top:(flipped? (100 + (lastMove.from[0]-1)*(window_width/8)) : (100 + (8-lastMove.from[0])*(window_width/8)))}}/>}       
+          {lastMove.piece && <View style={{backgroundColor:'yellow', opacity:.3, zIndex:0, width:size/8, height:size/8, position:'absolute', left:(flipped? ((8-lastMove.to[1])*window_width/8): ((lastMove.to[1]-1)*window_width/8)), top:(flipped? (100 + (lastMove.to[0]-1)*(window_width/8)) : (100 + (8-lastMove.to[0])*(window_width/8)))}}/>}
+          {promoted!=null && <PromotedMenu flipped={flipped} promoted={promoted} window_width={window_width} />}
       </View>
-
       </TouchableWithoutFeedback>
     );
   }
