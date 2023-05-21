@@ -1,4 +1,4 @@
-import { Dimensions, Image, StyleSheet } from 'react-native';
+import {Image} from 'react-native';
 
 
 export default function ChessBoard(props) {
