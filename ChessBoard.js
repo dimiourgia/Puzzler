@@ -1,5 +1,4 @@
 import { Dimensions, StyleSheet, Text, View, Image, ImageBackground, TouchableWithoutFeedback, Animated } from 'react-native';
-import Piece from './Piece';
 import { useState, useRef } from 'react';
 import {allPossibleMoves, isPossibleMove, isLegal, isInCheck, isMate, tn, fenToMap} from './helper';
 import PromotedMenu from './PromotedMenu';
@@ -10,23 +9,26 @@ import Board from './Board';
 //required assets
 const boardImageSource = require('./assets/images/others/board.jpg');
 
+var move_number = 0;
 //mimic of a puzzle from api
 var puzzle = {fen:'2R1K3/2Q5/8/8/8/8/pp6/1k5r', turn:'w', moves:[
   {
   white: {from:23, to: 73, promoted:''}, 
-  black: {from:81, to: 82, promoted:''}
+  black: {from:82, to: 81, promoted:''}
   },
   {
-    white: {from: {row:'', col:''}, to: {row: '', col: ''}, promoted:''}, 
-    black:{from: {row:'', col:''}, to: {row: '', col: ''}, promoted:''}
+    white: {from: 73, to: 83, promoted:''}, 
+    black:{from: 88, to: 83, promoted:''}
+  },
+  {
+    white: {from: 13, to: 83, promoted:''}, 
+    black:{from: null, to: null, promoted:''}
   },
 ]
 }
 
 //set the board in accordance with current puzzles fen
 console.log(fenToMap(puzzle.fen));
-
-
 var moves = [];
 
 export default function ChessBoard() {
@@ -34,7 +36,7 @@ export default function ChessBoard() {
   const window_width = Dimensions.get('window').width;
   const window_height = Dimensions.get('window').height;
   const size=window_width;
-  const topOffset = 100;
+  const topOffset = 100; 
   const flipped = false;
 
 
@@ -53,7 +55,7 @@ export default function ChessBoard() {
  // setMap(fenToMap(puzzle.fen));
 // move-> (from, to, incheck, mate, captured, promoted)
  
-const [lastMove, setLastMove] = useState({piece:null, from:[null, null], to:[null, null], incheck:false, mate:false, captured:false, promoted:false});
+const [lastMove, setLastMove] = useState({piece:null, from:[null, null], to:[null, null], incheck:false, mate:false, captured:false, promoted:false, map:map});
 const [turn, setTurn] = useState('w');
 const [lastTouch,setLastTouch] = useState(null);
 const [hint, setHint] = useState([]);
@@ -64,33 +66,24 @@ const [promoted, setPromoted] = useState(null);
 
 const castleInfo ={canWhiteCastle_short:true, canWhiteCastle_long:true, canBlackCastle_long:true, canBlackCastle_long:true, hasWkMoved:false, hasBkMoved:false, whiteRookKmoved:false, whiteRookQmoved:false, blackRookKmoved:false, blackRookQmoved:false}
 
-
-
 const handleTouch = (e)=>{
  const x = e.nativeEvent.pageX;
  const y = e.nativeEvent.pageY;
 
- if(y>100 && y<= 100+window_width){
-
- }
- else {
-  return;
- }
-
-
+ if(y<101 && y> 100+window_width) return;
  let row, col;
 
 //Identify the (row,col) clicked by the user
  row = Math.abs(Math.ceil(7 - ((y-100)/(size/8)))) +1;
  col = Math.floor(x/(size/8)) + 1;
 
+ //modify (row,col) if board is flipped i.e black is playing
  if(flipped){
   row = 9-row;
   col = 9-col;
  }
 
- //if(lastTouch !== null && activePiece.piece[0]!==turn) return;
-
+ 
 if(promoted===null && lastTouch===null){
   console.log('touched-1 :', row, col)
   console.log('turn :', turn);
@@ -158,7 +151,7 @@ console.log('touched-3 :', row, col, activePiece)
   console.log('turn :', turn);
   console.log(activePiece.row, activePiece.col,"   ", row, col)
   const captured = enpasant ? true : (map[row-1][col-1]!="" ? true: false);
-  setLastMove({piece:activePiece.piece,from:[activePiece.row,activePiece.col],to:[row,col],incheck:false,mate:'', captured: captured, promoted:false})
+  setLastMove({piece:activePiece.piece,from:[activePiece.row,activePiece.col],to:[row,col],incheck:false,mate:'', captured: captured, promoted:false, map:updatedMap.map(row=>row.slice())})
   //update moves array with the latest move
   moves.push(JSON.parse(JSON.stringify(lastMove)));
   //update castleInfo
@@ -173,6 +166,32 @@ console.log('touched-3 :', row, col, activePiece)
     setMate({side:turn, isMate:true});
   }
   console.log('turn changed :', turn);
+
+  console.log("log-puzzle", puzzle.moves[move_number].black);
+  //time for other player to move
+  //_______________________________________
+  function playMove(){
+  const props = puzzle.moves[move_number].black
+  const from_row = Math.floor(props.from/10)
+  const from_col = props.from%10
+  const to_row = Math.floor(props.to/10)
+  const to_col = (props.to%10)
+  const promoted = props.promoted
+  const map = updatedMap.map(row=>row.slice())
+  const piece = map[from_row-1][from_col-1];
+  const captured = (map[to_row-1][to_col-1] === "")? false : true
+
+  let updtMap = map.map(row=>row.slice());
+
+    updtMap[to_row-1][to_col-1] = promoted? promoted : piece
+    updtMap[from_row-1][from_col-1] = ""
+    setMap(updtMap)
+    setLastMove({piece:piece, from:[from_row, from_col], to:[to_row, to_col], incheck:false, mate:false, captured:captured, promoted:promoted, map:updtMap.map(row=>row.slice())})
+    moves.push(JSON.parse(JSON.stringify(lastMove)))
+    move_number++
+  }
+  setTimeout(playMove,1000)
+  //________________________________________
 }
 
 else{
@@ -198,11 +217,36 @@ else{
   var updatedMap = map.map(row=>row.slice());
   updatedMap[promotedToRow-1][promotedToCol-1] = piece;
   setMap(updatedMap);
-  setLastMove({piece:activePiece.piece,from:[activePiece.row,activePiece.col],to:[promotedToRow,promotedToCol],incheck:false,mate:'', captured: false, promoted:piece})
+  setLastMove({piece:activePiece.piece,from:[activePiece.row,activePiece.col],to:[promotedToRow,promotedToCol],incheck:false,mate:'', captured: false, promoted:piece, map:updatedMap.map(row=>row.slice())})
   setActivePiece({piece:null, row:null, col:null})
   setHint(null);
   setLastTouch(null);
   setPromoted(null);
+
+  //time for other player to move
+  //_______________________________________
+  function playMove(){
+    const props = puzzle.moves[move_number].black
+    const from_row = Math.floor(props.from/10)
+    const from_col = props.from%10
+    const to_row = Math.floor(props.to/10)
+    const to_col = (props.to%10)
+    const promoted = props.promoted
+    const map = updatedMap.map(row=>row.slice())
+    const piece = map[from_row-1][from_col-1];
+    const captured = (map[to_row-1][to_col-1] === "")? false : true
+  
+    let updtMap = map.map(row=>row.slice());
+  
+      updtMap[to_row-1][to_col-1] = promoted? promoted : piece
+      updtMap[from_row-1][from_col-1] = ""
+      setMap(updtMap)
+      setLastMove({piece:piece, from:[from_row, from_col], to:[to_row, to_col], incheck:false, mate:false, captured:captured, promoted:promoted, map:updtMap.map(row=>row.slice())})
+      moves.push(JSON.parse(JSON.stringify(lastMove)))
+      move_number++
+    }
+    setTimeout(playMove,1000)
+    //________________________________________
   
   }
 
@@ -220,7 +264,34 @@ else{
 
 //console.log('lastMove: ', lastMove);
 }
-//console.log(row,col);
+
+function makeMove(props){
+  console.log('come here buddy')
+  const from_row = Math.floor(props.from/10)
+  const from_col = props.from%10
+  const to_row = Math.floor(props.to/10)
+  const to_col = (props.to%10)
+  const promoted = props.promoted
+  const map = moves[moves.length-1].map
+  console.log('here',map);
+  const piece = map[from_row-1][from_col-1];
+  const captured = (map[to_row-1][to_col-1] === "")? false : true
+
+  let updatedMap = map.map(row=>row.slice());
+
+    updatedMap[to_row-1][to_col-1] = promoted? promoted : piece
+    updatedMap[from_row-1][from_col-1] = ""
+
+    setLastMove({piece:piece, from:[from_row, from_col], to:[to_row, to_col], incheck:false, mate:false, captured:captured, promoted:promoted})
+    moves.push(JSON.parse(JSON.stringify(lastMove)))
+    return updatedMap
+}
+
+function timedMove(){
+  setMap(makeMove(puzzle.moves[move_number].black))
+  move_number++;
+}
+
 }
 
     return (
